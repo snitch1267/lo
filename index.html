@@ -35,6 +35,9 @@
             text-align: center;
             position: relative;
             z-index: 2;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .photo-frames {
@@ -46,10 +49,10 @@
 
         .frame {
             position: absolute;
-            width: 200px;
-            height: 150px;
+            width: 150px;
+            height: 112px;
             background: #fff;
-            border: 12px solid #fff;
+            border: 8px solid #fff;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             padding: 8px;
             transform-origin: center;
@@ -57,6 +60,64 @@
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        @media (max-width: 768px) {
+            .frame {
+                width: 120px;
+                height: 90px;
+                border-width: 6px;
+            }
+
+            .frame:nth-child(1) { top: 5%; left: 5%; }
+            .frame:nth-child(2) { top: 8%; right: 5%; }
+            .frame:nth-child(3) { bottom: 8%; left: 8%; }
+            .frame:nth-child(4) { bottom: 10%; right: 8%; }
+
+            .heart {
+                font-size: 100px !important;
+            }
+
+            .love-letter {
+                padding: 25px !important;
+                width: 90% !important;
+            }
+
+            .love-letter h2 {
+                font-size: 2em !important;
+                margin-bottom: 20px !important;
+            }
+
+            .love-letter p {
+                font-size: 1em !important;
+                line-height: 1.6 !important;
+                margin-bottom: 15px !important;
+            }
+
+            .signature {
+                font-size: 1.5em !important;
+                margin-top: 25px !important;
+            }
+
+            .close-button {
+                top: 15px !important;
+                right: 15px !important;
+                font-size: 24px !important;
+            }
+        }
+
+        .frame.expanded {
+            position: fixed;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) scale(1.5) !important;
+            z-index: 1000;
+            animation: none;
+            max-width: 90vw;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
         }
 
         .frame::before {
@@ -304,62 +365,176 @@
     </div>
 
     <script>
-        document.getElementById('heart').addEventListener('click', function() {
-            const loveLetter = document.getElementById('loveLetter');
-            loveLetter.style.display = 'block';
-            requestAnimationFrame(() => {
-                loveLetter.classList.add('active');
-            });
-        });
+        // Heart click and love letter functionality
+document.getElementById('heart').addEventListener('click', function() {
+    const loveLetter = document.getElementById('loveLetter');
+    loveLetter.style.display = 'block';
+    requestAnimationFrame(() => {
+        loveLetter.classList.add('active');
+    });
+});
 
-        document.getElementById('closeButton').addEventListener('click', function() {
-            const loveLetter = document.getElementById('loveLetter');
-            loveLetter.classList.remove('active');
-            setTimeout(() => {
-                loveLetter.style.display = 'none';
-            }, 500);
-        });
+// Close button functionality
+document.getElementById('closeButton').addEventListener('click', function() {
+    const loveLetter = document.getElementById('loveLetter');
+    loveLetter.classList.remove('active');
+    setTimeout(() => {
+        loveLetter.style.display = 'none';
+    }, 500);
+});
 
-        document.addEventListener('mousemove', function(e) {
-            const frames = document.querySelectorAll('.frame:not(.expanded)');
-            const moveX = (e.clientX - window.innerWidth / 2) / 40;
-            const moveY = (e.clientY - window.innerHeight / 2) / 40;
+// Handle both mouse and touch movement
+const handleMove = function(e) {
+    const frames = document.querySelectorAll('.frame:not(.expanded)');
+    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+    const moveX = (clientX - window.innerWidth / 2) / 40;
+    const moveY = (clientY - window.innerHeight / 2) / 40;
 
-            frames.forEach((frame, index) => {
-                const delay = index * 0.1;
-                frame.style.transition = 'transform 0.3s ease';
-                frame.style.transform = `translate(${moveX}px, ${moveY}px) rotate(${frame.dataset.rotation || '0deg'})`;
-            });
-        });
+    frames.forEach((frame, index) => {
+        const delay = index * 0.1;
+        frame.style.transition = 'transform 0.3s ease';
+        frame.style.transform = `translate(${moveX}px, ${moveY}px) rotate(${frame.dataset.rotation || '0deg'})`;
+    });
+};
 
-        // Initialize frame rotations and add click handlers
-        document.querySelectorAll('.frame').forEach((frame, index) => {
-            const rotations = [-8, 6, -5, 7];
-            frame.style.setProperty('--rotation', `${rotations[index]}deg`);
+// Add movement event listeners
+document.addEventListener('mousemove', handleMove);
+document.addEventListener('touchmove', handleMove, { passive: true });
+document.addEventListener('touchstart', handleMove, { passive: true });
+
+// Reset frames position when touch/mouse leaves
+const handleLeave = function() {
+    const frames = document.querySelectorAll('.frame:not(.expanded)');
+    frames.forEach((frame) => {
+        frame.style.transition = 'transform 0.5s ease';
+        frame.style.transform = `rotate(${frame.dataset.rotation || '0deg'})`;
+    });
+};
+
+document.addEventListener('mouseleave', handleLeave);
+document.addEventListener('touchend', handleLeave);
+
+// Initialize frames with rotation and add click/touch handlers
+document.querySelectorAll('.frame').forEach((frame, index) => {
+    // Set initial rotations
+    const rotations = [-8, 6, -5, 7];
+    frame.dataset.rotation = `${rotations[index]}deg`;
+    frame.style.setProperty('--rotation', `${rotations[index]}deg`);
+    
+    // Handle frame click/touch
+    const handleFrameClick = function(e) {
+        e.preventDefault();
+        const overlay = document.getElementById('overlay');
+        
+        if (!this.classList.contains('expanded')) {
+            // Expand frame
+            this.classList.add('expanded');
+            overlay.classList.add('active');
+            this.style.animation = 'frameSpin 0.5s ease-out forwards';
             
-            frame.addEventListener('click', function() {
-                const overlay = document.getElementById('overlay');
-                if (!this.classList.contains('expanded')) {
-                    this.classList.add('expanded');
-                    overlay.classList.add('active');
-                    this.style.animation = 'frameSpin 0.5s ease-out forwards';
-                } else {
-                    this.classList.remove('expanded');
-                    overlay.classList.remove('active');
-                    this.style.animation = '';
-                }
+            // Disable other frames' pointer events
+            document.querySelectorAll('.frame:not(.expanded)').forEach(f => {
+                f.style.pointerEvents = 'none';
             });
-        });
+        } else {
+            // Collapse frame
+            this.classList.remove('expanded');
+            overlay.classList.remove('active');
+            this.style.animation = '';
+            
+            // Re-enable other frames' pointer events
+            document.querySelectorAll('.frame').forEach(f => {
+                f.style.pointerEvents = 'auto';
+            });
+        }
+    };
 
-        // Close expanded image when clicking overlay
-        document.getElementById('overlay').addEventListener('click', function() {
-            const expandedFrame = document.querySelector('.frame.expanded');
-            if (expandedFrame) {
-                expandedFrame.classList.remove('expanded');
-                expandedFrame.style.animation = '';
-                this.classList.remove('active');
-            }
-        });
+    // Add frame interaction listeners
+    frame.addEventListener('click', handleFrameClick);
+    frame.addEventListener('touchend', function(e) {
+        // Prevent ghost clicks on touch devices
+        e.preventDefault();
+        if (!frame.classList.contains('touched')) {
+            frame.classList.add('touched');
+            handleFrameClick.call(this, e);
+            setTimeout(() => frame.classList.remove('touched'), 300);
+        }
+    });
+});
+
+// Handle overlay click to close expanded frame
+document.getElementById('overlay').addEventListener('click', function(e) {
+    // Only close if clicking the overlay itself, not its children
+    if (e.target === this) {
+        const expandedFrame = document.querySelector('.frame.expanded');
+        if (expandedFrame) {
+            expandedFrame.classList.remove('expanded');
+            expandedFrame.style.animation = '';
+            this.classList.remove('active');
+            
+            // Re-enable all frames' pointer events
+            document.querySelectorAll('.frame').forEach(f => {
+                f.style.pointerEvents = 'auto';
+            });
+        }
+    }
+});
+
+// Prevent scrolling when touching frames on mobile
+document.querySelectorAll('.frame').forEach(frame => {
+    frame.addEventListener('touchmove', function(e) {
+        if (this.classList.contains('expanded')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+});
+
+// Handle window resize
+let resizeTimeout;
+window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+        const expandedFrame = document.querySelector('.frame.expanded');
+        if (expandedFrame) {
+            expandedFrame.classList.remove('expanded');
+            document.getElementById('overlay').classList.remove('active');
+            expandedFrame.style.animation = '';
+            
+            // Re-enable all frames' pointer events
+            document.querySelectorAll('.frame').forEach(f => {
+                f.style.pointerEvents = 'auto';
+            });
+        }
+    }, 250);
+});
+
+// Optional: Add swipe to close functionality for mobile
+let touchStartY;
+document.addEventListener('touchstart', function(e) {
+    const expandedFrame = document.querySelector('.frame.expanded');
+    if (expandedFrame) {
+        touchStartY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+    const expandedFrame = document.querySelector('.frame.expanded');
+    if (expandedFrame && touchStartY) {
+        const touchDiff = e.touches[0].clientY - touchStartY;
+        if (Math.abs(touchDiff) > 100) {
+            expandedFrame.classList.remove('expanded');
+            document.getElementById('overlay').classList.remove('active');
+            expandedFrame.style.animation = '';
+            touchStartY = null;
+            
+            // Re-enable all frames' pointer events
+            document.querySelectorAll('.frame').forEach(f => {
+                f.style.pointerEvents = 'auto';
+            });
+        }
+    }
+}, { passive: true });
     </script>
 </body>
 </html>
